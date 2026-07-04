@@ -1,0 +1,81 @@
+.entry-card {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.entry-card:hover {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+}
+
+.entry-header {
+  margin-bottom: 12px;
+}
+
+.entry-date {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-right: 12px;
+  font-weight: 500;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 8px;
+  border-radius: 50%;
+}
+
+.delete-btn:hover {
+  color: var(--dark-accent);
+  background: rgba(0,0,0,0.05);
+}
+
+.entry-preview {
+  font-size: 16px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.entry-full {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.entry-qa {
+  margin-bottom: 16px;
+}
+
+.entry-qa:last-child {
+  margin-bottom: 0;
+}
+
+.entry-prompt {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.entry-response {
+  font-size: 16px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
