@@ -18,7 +18,7 @@ export const JournalEntryCard: React.FC<Props> = ({ entry, onDelete }) => {
       <div className="entry-header flex-row justify-between items-center">
         <div>
           <span className="entry-date">{entry.date}</span>
-          <span className="entry-mood tag">{entry.detectedMood}</span>
+          {entry.emotionLabel && <span className="entry-mood tag">{entry.emotionLabel}</span>}
         </div>
         <button 
           className="delete-btn"

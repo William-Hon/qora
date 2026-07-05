@@ -1,51 +1,76 @@
 import React, { useState } from 'react';
 import { PromptCard } from './PromptCard';
 import { ProgressIndicator } from './ProgressIndicator';
-import { fixedPrompts, moodPrompts } from '../data/moodPrompts';
-import { detectMood } from '../utils/mood';
+import { EmotionFallbackSurvey } from './EmotionFallbackSurvey';
+import { detectStrongestEmotion } from '../lib/emotions/detectEmotion';
+import type { DetectionResult } from '../lib/emotions/detectEmotion';
+import type { EmotionKey } from '../lib/emotions/emotionTypes';
+import { EMOTION_BANK } from '../lib/emotions/emotionPromptBank';
 import { saveJournalEntry } from '../utils/storage';
-import type { PromptResponse, Mood } from '../types/journal';
+import type { PromptResponse } from '../types/journal';
 import '../styles/JournalFlow.css';
 
 export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => void }> = ({ onComplete, onViewPast }) => {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(0); 
   const [responses, setResponses] = useState<PromptResponse[]>([]);
-  const [detectedMood, setDetectedMood] = useState<Mood>('default');
+  const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
 
-  const totalSteps = 4;
-
-  const getCurrentPrompt = () => {
-    if (step === 0) return fixedPrompts[0];
-    if (step === 1) return fixedPrompts[1];
-    if (step === 2) return moodPrompts[detectedMood] || moodPrompts.default;
-    return fixedPrompts[2];
-  };
+  const totalSteps = 3;
 
   const handleContinue = (response: string) => {
-    const currentPrompt = getCurrentPrompt();
-    const newResponses = [...responses, { prompt: currentPrompt, response }];
+    let currentPromptStr = "";
+    if (step === 0) currentPromptStr = "What do you feel right now?";
+    else if (step === 1) currentPromptStr = "Why do you feel this?";
+    else if (step === 2 && detectionResult?.selectedPrompt) {
+      currentPromptStr = detectionResult.selectedPrompt;
+    }
+
+    const newResponses = [...responses, { prompt: currentPromptStr, response }];
     setResponses(newResponses);
 
     if (step === 0) {
-      // Detect mood after first answer
-      setDetectedMood(detectMood(response));
-    }
-
-    if (step < totalSteps - 1) {
-      setStep(step + 1);
-    } else {
-      // Save entry
+      setStep(1);
+    } else if (step === 1) {
+      const res = detectStrongestEmotion({
+        promptOneAnswer: newResponses[0].response,
+        promptTwoAnswer: newResponses[1].response
+      });
+      setDetectionResult(res);
+      
+      if (res.needsFallback) {
+        setShowFallback(true);
+      } else {
+        setStep(2);
+      }
+    } else if (step === 2) {
       const entry = {
         id: crypto.randomUUID(),
         date: new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
         createdAt: Date.now(),
-        detectedMood: step === 0 ? detectMood(response) : detectedMood,
+        emotionKey: detectionResult?.emotionKey || null,
+        emotionLabel: detectionResult?.emotionLabel || null,
+        selectedPrompt: detectionResult?.selectedPrompt || null,
+        promptIndex: detectionResult?.promptIndex || null,
         promptsAndResponses: newResponses,
       };
       saveJournalEntry(entry);
       setIsFinished(true);
     }
+  };
+
+  const handleFallbackSelect = (emotionKey: EmotionKey, promptIndex: number, selectedPrompt: string) => {
+    setDetectionResult(prev => ({
+      ...prev!,
+      emotionKey,
+      emotionLabel: EMOTION_BANK[emotionKey].label,
+      promptIndex,
+      selectedPrompt,
+      needsFallback: false
+    }));
+    setShowFallback(false);
+    setStep(2);
   };
 
   if (isFinished) {
@@ -60,6 +85,22 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
       </div>
     );
   }
+
+  if (showFallback) {
+    return (
+      <div className="journal-flow flex-col">
+        <ProgressIndicator totalSteps={totalSteps} currentStep={2} />
+        <EmotionFallbackSurvey onSelect={handleFallbackSelect} />
+      </div>
+    );
+  }
+
+  const getCurrentPrompt = () => {
+    if (step === 0) return "What do you feel right now?";
+    if (step === 1) return "Why do you feel this?";
+    if (step === 2 && detectionResult?.selectedPrompt) return detectionResult.selectedPrompt;
+    return "...";
+  };
 
   return (
     <div className="journal-flow flex-col">

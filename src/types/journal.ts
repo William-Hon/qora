@@ -1,15 +1,4 @@
-export type Mood =
-  | 'motivated'
-  | 'stressed'
-  | 'tired'
-  | 'sad'
-  | 'lost'
-  | 'anxious'
-  | 'angry'
-  | 'happy'
-  | 'calm'
-  | 'indifferent'
-  | 'default';
+import type { EmotionKey } from '../lib/emotions/emotionTypes';
 
 export interface PromptResponse {
   prompt: string;
@@ -20,6 +9,9 @@ export interface JournalEntry {
   id: string;
   date: string;
   createdAt: number;
-  detectedMood: Mood;
+  emotionKey: EmotionKey | null;
+  emotionLabel: string | null;
+  promptIndex: number | null;
+  selectedPrompt: string | null;
   promptsAndResponses: PromptResponse[];
 }
