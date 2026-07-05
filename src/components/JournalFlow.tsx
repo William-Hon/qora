@@ -27,15 +27,18 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
       currentPromptStr = detectionResult.selectedPrompt;
     }
 
-    const newResponses = [...responses, { prompt: currentPromptStr, response }];
-    setResponses(newResponses);
+    const updatedResponses = [...responses];
+    updatedResponses[step] = { prompt: currentPromptStr, response };
+    // Slice off any subsequent steps if the user went back and edited
+    const finalResponses = updatedResponses.slice(0, step + 1);
+    setResponses(finalResponses);
 
     if (step === 0) {
       setStep(1);
     } else if (step === 1) {
       const res = detectStrongestEmotion({
-        promptOneAnswer: newResponses[0].response,
-        promptTwoAnswer: newResponses[1].response
+        promptOneAnswer: finalResponses[0].response,
+        promptTwoAnswer: finalResponses[1].response
       });
       setDetectionResult(res);
       
@@ -53,7 +56,7 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
         emotionLabel: detectionResult?.emotionLabel || null,
         selectedPrompt: detectionResult?.selectedPrompt || null,
         promptIndex: detectionResult?.promptIndex || null,
-        promptsAndResponses: newResponses,
+        promptsAndResponses: finalResponses,
       };
       saveJournalEntry(entry);
       setIsFinished(true);
@@ -108,6 +111,8 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
       <PromptCard 
         prompt={getCurrentPrompt()} 
         onContinue={handleContinue} 
+        onBack={step > 0 ? () => setStep(step - 1) : undefined}
+        initialResponse={responses[step]?.response || ''}
         isLast={step === totalSteps - 1} 
       />
     </div>

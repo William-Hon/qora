@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { JournalEntry } from '../types/journal';
-import { getJournalEntries, deleteJournalEntry } from '../utils/storage';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../utils/storage';
 import { JournalEntryCard } from './JournalEntryCard';
 import '../styles/PastJournals.css';
 
@@ -22,6 +22,11 @@ export const PastJournals: React.FC = () => {
     loadEntries();
   };
 
+  const handleUpdate = (updatedEntry: JournalEntry) => {
+    updateJournalEntry(updatedEntry);
+    loadEntries();
+  };
+
   return (
     <div className="past-journals flex-col fade-in">
       <h2 className="past-journals-title">Past Journals</h2>
@@ -30,7 +35,7 @@ export const PastJournals: React.FC = () => {
       ) : (
         <div className="entries-list flex-col">
           {entries.map(entry => (
-            <JournalEntryCard key={entry.id} entry={entry} onDelete={handleDelete} />
+            <JournalEntryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdate} />
           ))}
         </div>
       )}

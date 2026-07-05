@@ -23,3 +23,13 @@ export function deleteJournalEntry(id: string): void {
   const updatedEntries = entries.filter(entry => entry.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
 }
+
+export function updateJournalEntry(updatedEntry: JournalEntry): void {
+  const entries = getJournalEntries();
+  const index = entries.findIndex(entry => entry.id === updatedEntry.id);
+  if (index !== -1) {
+    entries[index] = updatedEntry;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+}
+
