@@ -18,6 +18,7 @@ Smart Prompt & Emotion Detection MVP
 - Smart follow-up prompts tailored to detected emotions
 - Safety checks for high-risk keywords
 - Speech-to-text dictation using the Web Speech API
+- Hybrid Image and PDF scanning (extracts text natively from typed PDFs or uses OCR for images and scanned PDFs)
 - Keyboard shortcuts (Ctrl+Enter to submit) and ability to go back and edit previous answers
 - Inline editing of past journal entries from the Past Journals page
 
@@ -26,16 +27,15 @@ Smart Prompt & Emotion Detection MVP
 ## Latest Session Changes
 
 Added
-- Speech-to-text dictation using the Web Speech API (`useSpeechToText.ts` hook)
+- `pdfjs-dist` dependency for robust PDF parsing
+- `useDocumentScanner.ts` hook combining Tesseract.js OCR and PDF.js native text extraction for a hybrid scanning approach
 
 Changed
-- `PromptCard`: Added a live-transcribing microphone button, a "Back" navigation button, and a `Ctrl+Enter` submit shortcut
-- `JournalFlow`: Added backwards navigation and ability to edit previous steps dynamically
-- `PastJournals` & `JournalEntryCard`: Added inline editing UI to modify previously saved journal answers
-- `utils/storage`: Added `updateJournalEntry` to persist modifications
+- `PromptCard`: Updated the "Scan Reflection" button to accept PDFs, refactored preview logic, and updated loading states
+- `PromptCard.css`: Added styles for the scan button and OCR preview components
 
 Removed
-- (None this session)
+- `useImageOcr.ts` (replaced by the more robust `useDocumentScanner.ts`)
 
 ---
 
@@ -46,8 +46,9 @@ Removed
 3. Emotion detection engine evaluates responses.
 4. If confidence is low or ambiguous, a fallback emotion picker appears.
 5. An appropriate emotion-specific reflection prompt is shown.
-6. Journal entry is saved to local storage.
-7. Users can revisit the "Past Journals" tab to inline-edit their past answers.
+6. User can type, dictate, or scan a handwritten response via OCR/PDF upload.
+7. Journal entry is saved to local storage.
+8. Users can revisit the "Past Journals" tab to inline-edit their past answers.
 
 ---
 
@@ -57,6 +58,8 @@ Removed
 - TypeScript
 - CSS
 - Local Storage
+- Tesseract.js (Browser-based OCR)
+- PDF.js (Browser-based PDF parsing)
 
 ---
 
@@ -64,7 +67,7 @@ Removed
 
 `src/`
 `src/components/` - React components for the journaling flow
-`src/hooks/` - Custom React hooks like `useSpeechToText`
+`src/hooks/` - Custom React hooks like `useSpeechToText` and `useDocumentScanner`
 `src/lib/emotions/` - Emotion detection logic, keywords, and prompts
 `src/styles/` - Vanilla CSS styles
 `src/types/` - TypeScript definitions
@@ -78,6 +81,8 @@ Removed
 - No authentication
 - No cloud sync
 - Emotion detection uses deterministic keyword matching, which may miss complex emotional nuances compared to an AI model.
+- Handwriting OCR accuracy depends heavily on image quality, lighting, and handwriting clarity.
+- Scanning multi-page handwritten PDFs via Tesseract.js is CPU-intensive and may temporarily slow down older mobile devices.
 
 ---
 
