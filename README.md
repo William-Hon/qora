@@ -57,7 +57,7 @@ Removed
 - React
 - TypeScript
 - CSS
-- Local Storage
+- Supabase (Auth and Database)
 - Tesseract.js (Browser-based OCR)
 - PDF.js (Browser-based PDF parsing)
 
@@ -76,10 +76,6 @@ Removed
 ---
 
 ## Known Limitations
-- Local storage only
-- No backend
-- No authentication
-- No cloud sync
 - Emotion detection uses deterministic keyword matching, which may miss complex emotional nuances compared to an AI model.
 - Handwriting OCR accuracy depends heavily on image quality, lighting, and handwriting clarity.
 - Scanning multi-page handwritten PDFs via Tesseract.js is CPU-intensive and may temporarily slow down older mobile devices.
@@ -91,6 +87,22 @@ Removed
 - Improve emotion detection accuracy and context awareness.
 - Add ability to re-run emotion detection if an entry is edited retroactively.
 - Further polish the UI/UX.
+
+---
+
+## Supabase Setup
+
+To enable authentication and cloud journal storage, you need a Supabase project.
+
+1. Create a `.env` file in the root directory and add your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+   ```
+   **Important:** Never place your secret `service_role` key in frontend environment variables!
+
+2. Run the SQL schema script in your Supabase SQL Editor:
+   - Copy the contents of `docs/supabase_schema.sql` and run it in the SQL Editor to create the `journal_entries` table and Row Level Security (RLS) policies.
 
 ---
 

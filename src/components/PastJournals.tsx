@@ -1,30 +1,52 @@
 import React, { useEffect, useState } from 'react';
 import type { JournalEntry } from '../types/journal';
-import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../utils/storage';
+import { getJournalEntries, deleteJournalEntry, updateJournalEntry } from '../services/journalService';
+import { useAuth } from '../contexts/AuthContext';
 import { JournalEntryCard } from './JournalEntryCard';
 import '../styles/PastJournals.css';
 
 export const PastJournals: React.FC = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadEntries();
-  }, []);
+    if (user) loadEntries();
+  }, [user]);
 
-  const loadEntries = () => {
-    const data = getJournalEntries();
-    // Sort descending by createdAt
-    setEntries(data.sort((a, b) => b.createdAt - a.createdAt));
+  const loadEntries = async () => {
+    if (!user) return;
+    try {
+      const data = await getJournalEntries(user.id);
+      setEntries(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteJournalEntry(id);
-    loadEntries();
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteJournalEntry(id);
+      loadEntries();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleUpdate = (updatedEntry: JournalEntry) => {
-    updateJournalEntry(updatedEntry);
-    loadEntries();
+  const handleUpdate = async (updatedEntry: JournalEntry) => {
+    try {
+      const payload = {
+        emotionKey: updatedEntry.emotionKey,
+        emotionLabel: updatedEntry.emotionLabel,
+        promptIndex: updatedEntry.promptIndex,
+        selectedPrompt: updatedEntry.selectedPrompt,
+        promptsAndResponses: updatedEntry.promptsAndResponses,
+        formattedDate: updatedEntry.date,
+      };
+      await updateJournalEntry(updatedEntry.id, payload);
+      loadEntries();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

@@ -6,11 +6,13 @@ import { detectStrongestEmotion } from '../lib/emotions/detectEmotion';
 import type { DetectionResult } from '../lib/emotions/detectEmotion';
 import type { EmotionKey } from '../lib/emotions/emotionTypes';
 import { EMOTION_BANK } from '../lib/emotions/emotionPromptBank';
-import { saveJournalEntry } from '../utils/storage';
+import { createJournalEntry } from '../services/journalService';
+import { useAuth } from '../contexts/AuthContext';
 import type { PromptResponse } from '../types/journal';
 import '../styles/JournalFlow.css';
 
 export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => void }> = ({ onComplete, onViewPast }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState(0); 
   const [responses, setResponses] = useState<PromptResponse[]>([]);
   const [detectionResult, setDetectionResult] = useState<DetectionResult | null>(null);
@@ -48,18 +50,24 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
         setStep(2);
       }
     } else if (step === 2) {
+      if (!user) return;
+      
       const entry = {
-        id: crypto.randomUUID(),
         date: new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-        createdAt: Date.now(),
         emotionKey: detectionResult?.emotionKey || null,
         emotionLabel: detectionResult?.emotionLabel || null,
         selectedPrompt: detectionResult?.selectedPrompt || null,
         promptIndex: detectionResult?.promptIndex || null,
         promptsAndResponses: finalResponses,
       };
-      saveJournalEntry(entry);
-      setIsFinished(true);
+      
+      const entryDate = new Date().toISOString().split('T')[0];
+      
+      createJournalEntry(user.id, entryDate, entry).then(() => {
+        setIsFinished(true);
+      }).catch(err => {
+        console.error('Failed to save entry', err);
+      });
     }
   };
 

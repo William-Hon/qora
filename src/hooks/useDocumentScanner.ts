@@ -56,6 +56,7 @@ export const useDocumentScanner = () => {
         canvas.width = viewport.width;
 
         if (context) {
+          // @ts-ignore
           await page.render({ canvasContext: context, viewport }).promise;
           
           const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));

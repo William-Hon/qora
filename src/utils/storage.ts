@@ -1,35 +1,17 @@
-import type { JournalEntry } from '../types/journal';
+/**
+ * MIGRATION NOTE:
+ * LocalStorage journal storage has been migrated to Supabase.
+ * Please use src/services/journalService.ts for all journal interactions.
+ * 
+ * If you need to recover old localStorage entries, you can read from the 'qora_journal_entries' key.
+ */
 
-const STORAGE_KEY = 'qora_journal_entries';
-
-export function saveJournalEntry(entry: JournalEntry): void {
-  const entries = getJournalEntries();
-  entries.push(entry);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
-export function getJournalEntries(): JournalEntry[] {
-  const data = localStorage.getItem(STORAGE_KEY);
+export function getLegacyLocalEntries(): any[] {
+  const data = localStorage.getItem('qora_journal_entries');
   if (!data) return [];
   try {
-    return JSON.parse(data) as JournalEntry[];
+    return JSON.parse(data);
   } catch {
     return [];
   }
 }
-
-export function deleteJournalEntry(id: string): void {
-  const entries = getJournalEntries();
-  const updatedEntries = entries.filter(entry => entry.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedEntries));
-}
-
-export function updateJournalEntry(updatedEntry: JournalEntry): void {
-  const entries = getJournalEntries();
-  const index = entries.findIndex(entry => entry.id === updatedEntry.id);
-  if (index !== -1) {
-    entries[index] = updatedEntry;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  }
-}
-
