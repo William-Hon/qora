@@ -30,15 +30,16 @@ Smart Prompt & Emotion Detection MVP
 ## Latest Session Changes
 
 Added
-- `pdfjs-dist` dependency for robust PDF parsing
-- `useDocumentScanner.ts` hook combining Tesseract.js OCR and PDF.js native text extraction for a hybrid scanning approach
+- Backend API endpoint `/api/ocr.ts` to securely handle Google Cloud Vision API calls and quota verification using Supabase RPC (`reserve_ocr_unit`).
+- Custom Vite server middleware in `vite.config.ts` to handle local development of the `/api/ocr` serverless endpoint without needing `vercel dev`.
 
 Changed
-- `PromptCard`: Updated the "Scan Reflection" button to accept PDFs, refactored preview logic, and updated loading states
-- `PromptCard.css`: Added styles for the scan button and OCR preview components
+- `PromptCard`: Renamed "Scan Document" button to "Upload Entry" and introduced an intermediate modal to choose between "Typed" (Unlimited, local OCR) and "Handwritten" (Quota-based, Cloud OCR).
+- `useDocumentScanner.ts`: Updated logic to dynamically route OCR tasks to local Tesseract or the backend Cloud Vision endpoint depending on the user's selection.
+- `index.html`: Updated browser tab title to "qora" and added custom favicon.
 
 Removed
-- `useImageOcr.ts` (replaced by the more robust `useDocumentScanner.ts`)
+- `vite-plugin-vercel` (replaced by a lightweight custom Vite middleware for a smoother local dev experience).
 
 ---
 
@@ -116,12 +117,12 @@ To enable highly accurate handwriting recognition, the app uses a serverless bac
 
 1. Get a Google Cloud Vision API Key from the Google Cloud Console.
 2. If deploying to **Vercel**, add the following Environment Variables to your project settings:
-   - `GOOGLE_CLOUD_VISION_API_KEY` (Sensitive)
+   - `GOOGLE_CLOUD_VISION_API_KEY`
    - `SUPABASE_URL`
    - `SUPABASE_PUBLISHABLE_KEY`
    *Note: These backend variables must NOT be prefixed with `VITE_`.*
 3. Redeploy your Vercel project after adding these variables.
-4. For **local testing** of the cloud OCR endpoint, create a `.env.local` file with these backend variables and run the app using `vercel dev` instead of `npm run dev`.
+4. For **local testing** of the cloud OCR endpoint, simply create a `.env.local` file with all your variables (including `VITE_` ones). Our custom Vite config will automatically load them for the local backend mock.
 
 ---
 
@@ -132,12 +133,8 @@ To enable highly accurate handwriting recognition, the app uses a serverless bac
    npm install
    ```
 
-2. Run the development server (Frontend only):
+2. Run the development server:
    ```bash
    npm run dev
    ```
-   
-   To test the full app including the backend `api/ocr` endpoint locally:
-   ```bash
-   vercel dev
-   ```
+   *Note: Our custom `vite.config.ts` handles serving the frontend AND the backend `/api/ocr` serverless function simultaneously!*

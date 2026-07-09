@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 import { useDocumentScanner } from '../hooks/useDocumentScanner';
+import { supabase } from '../lib/supabaseClient';
 import '../styles/PromptCard.css';
 
 interface PromptCardProps {
@@ -14,9 +15,46 @@ interface PromptCardProps {
 export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBack, initialResponse = '', isLast = false }) => {
   const [response, setResponse] = useState(initialResponse);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [usedSource, setUsedSource] = useState<string>('typed');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [pendingScanType, setPendingScanType] = useState<'typed' | 'handwritten'>('typed');
+  const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchQuota = async () => {
+    try {
+      const startOfDay = new Date();
+      startOfDay.setHours(0,0,0,0);
+      
+      const { count, error } = await supabase
+        .from('ocr_usage_events')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay.toISOString());
+        
+      if (!error && count !== null) {
+         setRemainingScans(Math.max(0, 5 - count));
+      } else {
+         setRemainingScans(0);
+      }
+    } catch (err) {
+      setRemainingScans(0);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fetchQuota();
+    setShowUploadModal(true);
+  };
+
+  const handleScanTypeSelect = (type: 'typed' | 'handwritten') => {
+    setPendingScanType(type);
+    setShowUploadModal(false);
+    setTimeout(() => {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    }, 10);
+  };
 
   const handleSpeechResult = (text: string) => {
     setUsedSource('voice');
@@ -46,7 +84,6 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
       URL.revokeObjectURL(imagePreview);
     }
     setImagePreview(null);
-    setPendingFile(null);
     resetScanner();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -58,6 +95,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
     setResponse(initialResponse);
     setUsedSource('typed');
     clearImagePreview();
+    setShowUploadModal(false);
   }, [prompt, initialResponse]);
 
   // Cleanup object URL on unmount
@@ -76,20 +114,17 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
     if (file.type.startsWith('image/')) {
       const objectUrl = URL.createObjectURL(file);
       setImagePreview(objectUrl);
-      setPendingFile(file);
     } else {
-      // Clear any existing preview for PDFs
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
       setImagePreview(null);
-      // Process PDFs immediately
-      processFile(file, 'typed');
     }
+
+    processFile(file, pendingScanType);
   };
 
   const processFile = async (file: File, scanType: 'typed' | 'handwritten') => {
-    setPendingFile(null);
     setUsedSource('photo');
     try {
       const extractedText = await extractText(file, scanType);
@@ -134,13 +169,30 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
           </div>
         )}
 
-        {pendingFile && (
-          <div className="scan-type-prompt fade-in">
-            <p>Is this document typed or handwritten?</p>
-            <div className="scan-type-buttons">
-              <button className="primary-btn" onClick={() => processFile(pendingFile, 'typed')}>Typed</button>
-              <button className="primary-btn outline" onClick={() => processFile(pendingFile, 'handwritten')}>Handwritten</button>
+        {showUploadModal && (
+          <div className="upload-modal fade-in">
+            <p>What kind of document is this?</p>
+            <div className="upload-modal-buttons">
+              <button 
+                className="primary-btn" 
+                onClick={() => handleScanTypeSelect('typed')}
+              >
+                <strong>Typed Entry</strong>
+                <span>Unlimited uploads</span>
+              </button>
+              
+              <button 
+                className="primary-btn outline" 
+                onClick={() => handleScanTypeSelect('handwritten')}
+                disabled={remainingScans === 0}
+              >
+                <strong>Handwritten</strong>
+                <span>
+                  {remainingScans === null ? 'Loading...' : `${remainingScans} uploads left today`}
+                </span>
+              </button>
             </div>
+            <button className="text-btn cancel-btn" onClick={() => setShowUploadModal(false)}>Cancel</button>
           </div>
         )}
         
@@ -162,12 +214,11 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
           value={response}
           onChange={(e) => {
              setResponse(e.target.value);
-             // If user starts typing normally, we could assume 'typed', but let's leave it as what it was initialized/set to
              if (!usedSource) setUsedSource('typed');
           }}
           onKeyDown={handleKeyDown}
           autoFocus
-          disabled={!!pendingFile || isProcessing}
+          disabled={showUploadModal || isProcessing}
         />
         {isListening && interimTranscript && (
           <p className="interim-text">{interimTranscript}</p>
@@ -180,18 +231,9 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
                 className={`action-btn mic-btn ${isListening ? 'listening' : ''}`}
                 onClick={toggleListening}
                 title="Dictate with voice"
-                disabled={!!pendingFile || isProcessing}
+                disabled={showUploadModal || isProcessing}
               >
-                <svg 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                   <line x1="12" x2="12" y1="19" y2="22"/>
@@ -203,17 +245,17 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
             )}
 
             <button
-              className={`action-btn scan-btn ${isProcessing || pendingFile ? 'processing' : ''}`}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isProcessing || !!pendingFile}
-              title="Scan Reflection or Document"
+              className={`action-btn scan-btn ${isProcessing || showUploadModal ? 'processing' : ''}`}
+              onClick={handleUploadClick}
+              disabled={isProcessing || showUploadModal}
+              title="Upload Entry"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                <circle cx="9" cy="9" r="2"/>
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" x2="12" y1="3" y2="15"/>
               </svg>
-              <span className="action-btn-text">Scan Document</span>
+              <span className="action-btn-text">Upload Entry</span>
             </button>
             <input
               type="file"
@@ -230,7 +272,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
               <button 
                 className="back-btn"
                 onClick={onBack}
-                disabled={!!pendingFile || isProcessing}
+                disabled={showUploadModal || isProcessing}
               >
                 Back
               </button>
@@ -238,7 +280,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
             <button 
               className="continue-btn"
               onClick={handleContinue}
-              disabled={!response.trim() || !!pendingFile || isProcessing}
+              disabled={!response.trim() || showUploadModal || isProcessing}
             >
               {isLast ? 'Complete' : 'Continue'}
               <span className="shortcut-hint"> (Ctrl + Enter)</span>

@@ -1,6 +1,14 @@
 /// <reference types="node" />
 import { createClient } from '@supabase/supabase-js';
 
+console.log('--- OCR ROUTE LOADED ---');
+console.log('SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+console.log('VITE_SUPABASE_URL exists:', !!process.env.VITE_SUPABASE_URL);
+console.log('SUPABASE_PUBLISHABLE_KEY exists:', !!process.env.SUPABASE_PUBLISHABLE_KEY);
+console.log('VITE_SUPABASE_PUBLISHABLE_KEY exists:', !!process.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+console.log('GOOGLE_CLOUD_VISION_API_KEY exists:', !!process.env.GOOGLE_CLOUD_VISION_API_KEY);
+console.log('------------------------');
+
 export const config = {
   api: {
     bodyParser: {
@@ -43,6 +51,9 @@ export default async function handler(req: any, res: any) {
     const visionApiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error('DEBUG - Available env keys:', Object.keys(process.env).filter(k => k.includes('SUPABASE') || k.includes('VITE_')));
+      console.error('DEBUG - supabaseUrl:', supabaseUrl);
+      console.error('DEBUG - supabaseKey:', supabaseKey ? 'PRESENT' : 'MISSING');
       console.error('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY in backend env.');
       return res.status(500).json({ error: 'Server configuration error.' });
     }
