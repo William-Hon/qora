@@ -12,7 +12,7 @@ Smart Prompt & Emotion Detection MVP
 
 ## Current Features
 - Guided journaling flow with 3 steps
-- Local journal storage (offline-first)
+- Secure cloud journal storage with User Authentication (via Supabase)
 - Keyword-based emotion detection with confidence scoring and contextual modifiers (negation, intensifiers)
 - Fallback emotion survey for low-confidence detections
 - Smart follow-up prompts tailored to detected emotions
@@ -47,7 +47,7 @@ Removed
 4. If confidence is low or ambiguous, a fallback emotion picker appears.
 5. An appropriate emotion-specific reflection prompt is shown.
 6. User can type, dictate, or scan a handwritten response via OCR/PDF upload.
-7. Journal entry is saved to local storage.
+7. Journal entry is saved securely to the user's Supabase account.
 8. Users can revisit the "Past Journals" tab to inline-edit their past answers.
 
 ---
@@ -71,7 +71,8 @@ Removed
 `src/lib/emotions/` - Emotion detection logic, keywords, and prompts
 `src/styles/` - Vanilla CSS styles
 `src/types/` - TypeScript definitions
-`src/utils/` - Local storage utilities
+`src/services/` - Supabase database interactions
+`src/utils/` - Legacy local storage utilities
 
 ---
 
