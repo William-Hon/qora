@@ -18,7 +18,10 @@ Smart Prompt & Emotion Detection MVP
 - Smart follow-up prompts tailored to detected emotions
 - Safety checks for high-risk keywords
 - Speech-to-text dictation using the Web Speech API
-- Hybrid Image and PDF scanning (extracts text natively from typed PDFs or uses OCR for images and scanned PDFs)
+- Hybrid Image and PDF scanning
+  - Typed documents use free, browser-native Tesseract.js and PDF.js
+  - Handwritten documents securely use Google Cloud Vision API for high accuracy
+- OCR Usage limits built-in (5 scans/user/day, 900 scans/app/month)
 - Keyboard shortcuts (Ctrl+Enter to submit) and ability to go back and edit previous answers
 - Inline editing of past journal entries from the Past Journals page
 
@@ -78,8 +81,8 @@ Removed
 
 ## Known Limitations
 - Emotion detection uses deterministic keyword matching, which may miss complex emotional nuances compared to an AI model.
-- Handwriting OCR accuracy depends heavily on image quality, lighting, and handwriting clarity.
-- Scanning multi-page handwritten PDFs via Tesseract.js is CPU-intensive and may temporarily slow down older mobile devices.
+- Handwriting OCR accuracy depends on image quality and handwriting clarity, though Google Vision provides state-of-the-art results.
+- Cloud OCR requires a stable internet connection and is subject to daily and monthly usage caps.
 
 ---
 
@@ -103,7 +106,22 @@ To enable authentication and cloud journal storage, you need a Supabase project.
    **Important:** Never place your secret `service_role` key in frontend environment variables!
 
 2. Run the SQL schema script in your Supabase SQL Editor:
-   - Copy the contents of `docs/supabase_schema.sql` and run it in the SQL Editor to create the `journal_entries` table and Row Level Security (RLS) policies.
+   - Copy the contents of `docs/supabase_schema.sql` and run it in the SQL Editor to create the `journal_entries` table, Row Level Security (RLS) policies, and the `ocr_usage_events` table for tracking OCR limits.
+
+---
+
+## Google Cloud Vision Setup
+
+To enable highly accurate handwriting recognition, the app uses a serverless backend (`api/ocr.ts`) to communicate with Google Cloud Vision securely.
+
+1. Get a Google Cloud Vision API Key from the Google Cloud Console.
+2. If deploying to **Vercel**, add the following Environment Variables to your project settings:
+   - `GOOGLE_CLOUD_VISION_API_KEY` (Sensitive)
+   - `SUPABASE_URL`
+   - `SUPABASE_PUBLISHABLE_KEY`
+   *Note: These backend variables must NOT be prefixed with `VITE_`.*
+3. Redeploy your Vercel project after adding these variables.
+4. For **local testing** of the cloud OCR endpoint, create a `.env.local` file with these backend variables and run the app using `vercel dev` instead of `npm run dev`.
 
 ---
 
@@ -114,7 +132,12 @@ To enable authentication and cloud journal storage, you need a Supabase project.
    npm install
    ```
 
-2. Run the development server:
+2. Run the development server (Frontend only):
    ```bash
    npm run dev
+   ```
+   
+   To test the full app including the backend `api/ocr` endpoint locally:
+   ```bash
+   vercel dev
    ```

@@ -79,3 +79,93 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ==========================================
+-- OCR USAGE LIMITS
+-- ==========================================
+
+create table if not exists public.ocr_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  provider text not null default 'google_vision',
+  feature text not null default 'TEXT_DETECTION',
+  status text not null default 'reserved',
+  image_hash text
+);
+
+alter table public.ocr_usage_events enable row level security;
+
+create policy "Users can view their own OCR usage"
+on public.ocr_usage_events
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+create or replace function public.reserve_ocr_unit(p_image_hash text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_today_count int;
+  v_month_count int;
+  v_event_id uuid;
+begin
+  if v_user_id is null then
+    return jsonb_build_object('allowed', false, 'reason', 'not_authenticated');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('qora_ocr_global_monthly_cap'));
+
+  select count(*)
+  into v_today_count
+  from public.ocr_usage_events
+  where user_id = v_user_id
+    and created_at >= date_trunc('day', now());
+
+  if v_today_count >= 5 then
+    return jsonb_build_object(
+      'allowed', false,
+      'reason', 'daily_limit_reached'
+    );
+  end if;
+
+  select count(*)
+  into v_month_count
+  from public.ocr_usage_events
+  where created_at >= date_trunc('month', now());
+
+  if v_month_count >= 900 then
+    return jsonb_build_object(
+      'allowed', false,
+      'reason', 'monthly_app_limit_reached'
+    );
+  end if;
+
+  insert into public.ocr_usage_events (
+    user_id,
+    provider,
+    feature,
+    status,
+    image_hash
+  )
+  values (
+    v_user_id,
+    'google_vision',
+    'TEXT_DETECTION',
+    'reserved',
+    p_image_hash
+  )
+  returning id into v_event_id;
+
+  return jsonb_build_object(
+    'allowed', true,
+    'event_id', v_event_id,
+    'remaining_today', 4 - v_today_count,
+    'remaining_month', 899 - v_month_count
+  );
+end;
+$$;

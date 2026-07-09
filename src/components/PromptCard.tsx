@@ -5,7 +5,7 @@ import '../styles/PromptCard.css';
 
 interface PromptCardProps {
   prompt: string;
-  onContinue: (response: string) => void;
+  onContinue: (response: string, source: string) => void;
   onBack?: () => void;
   initialResponse?: string;
   isLast?: boolean;
@@ -14,9 +14,12 @@ interface PromptCardProps {
 export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBack, initialResponse = '', isLast = false }) => {
   const [response, setResponse] = useState(initialResponse);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [usedSource, setUsedSource] = useState<string>('typed');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSpeechResult = (text: string) => {
+    setUsedSource('voice');
     setResponse(prev => {
       const current = prev.trim();
       return current ? `${current} ${text}` : text;
@@ -43,6 +46,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
       URL.revokeObjectURL(imagePreview);
     }
     setImagePreview(null);
+    setPendingFile(null);
     resetScanner();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -52,6 +56,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
   // Reset response when prompt or initialResponse changes
   useEffect(() => {
     setResponse(initialResponse);
+    setUsedSource('typed');
     clearImagePreview();
   }, [prompt, initialResponse]);
 
@@ -71,16 +76,23 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
     if (file.type.startsWith('image/')) {
       const objectUrl = URL.createObjectURL(file);
       setImagePreview(objectUrl);
+      setPendingFile(file);
     } else {
       // Clear any existing preview for PDFs
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
       setImagePreview(null);
+      // Process PDFs immediately
+      processFile(file, 'typed');
     }
+  };
 
+  const processFile = async (file: File, scanType: 'typed' | 'handwritten') => {
+    setPendingFile(null);
+    setUsedSource('photo');
     try {
-      const extractedText = await extractText(file);
+      const extractedText = await extractText(file, scanType);
       if (extractedText) {
         setResponse(prev => {
           const current = prev.trim();
@@ -94,7 +106,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
 
   const handleContinue = () => {
     if (response.trim()) {
-      onContinue(response.trim());
+      onContinue(response.trim(), usedSource);
     }
   };
 
@@ -121,6 +133,16 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
             </button>
           </div>
         )}
+
+        {pendingFile && (
+          <div className="scan-type-prompt fade-in">
+            <p>Is this document typed or handwritten?</p>
+            <div className="scan-type-buttons">
+              <button className="primary-btn" onClick={() => processFile(pendingFile, 'typed')}>Typed</button>
+              <button className="primary-btn outline" onClick={() => processFile(pendingFile, 'handwritten')}>Handwritten</button>
+            </div>
+          </div>
+        )}
         
         {isProcessing && (
           <div className="ocr-status loading">
@@ -138,9 +160,14 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
           className="prompt-textarea"
           placeholder="Type your thoughts here..."
           value={response}
-          onChange={(e) => setResponse(e.target.value)}
+          onChange={(e) => {
+             setResponse(e.target.value);
+             // If user starts typing normally, we could assume 'typed', but let's leave it as what it was initialized/set to
+             if (!usedSource) setUsedSource('typed');
+          }}
           onKeyDown={handleKeyDown}
           autoFocus
+          disabled={!!pendingFile || isProcessing}
         />
         {isListening && interimTranscript && (
           <p className="interim-text">{interimTranscript}</p>
@@ -153,6 +180,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
                 className={`action-btn mic-btn ${isListening ? 'listening' : ''}`}
                 onClick={toggleListening}
                 title="Dictate with voice"
+                disabled={!!pendingFile || isProcessing}
               >
                 <svg 
                   width="24" 
@@ -175,9 +203,9 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
             )}
 
             <button
-              className={`action-btn scan-btn ${isProcessing ? 'processing' : ''}`}
+              className={`action-btn scan-btn ${isProcessing || pendingFile ? 'processing' : ''}`}
               onClick={() => fileInputRef.current?.click()}
-              disabled={isProcessing}
+              disabled={isProcessing || !!pendingFile}
               title="Scan Reflection or Document"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -202,6 +230,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
               <button 
                 className="back-btn"
                 onClick={onBack}
+                disabled={!!pendingFile || isProcessing}
               >
                 Back
               </button>
@@ -209,7 +238,7 @@ export const PromptCard: React.FC<PromptCardProps> = ({ prompt, onContinue, onBa
             <button 
               className="continue-btn"
               onClick={handleContinue}
-              disabled={!response.trim()}
+              disabled={!response.trim() || !!pendingFile || isProcessing}
             >
               {isLast ? 'Complete' : 'Continue'}
               <span className="shortcut-hint"> (Ctrl + Enter)</span>

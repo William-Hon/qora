@@ -21,7 +21,7 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
 
   const totalSteps = 3;
 
-  const handleContinue = (response: string) => {
+  const handleContinue = (response: string, source: string = 'typed') => {
     let currentPromptStr = "";
     if (step === 0) currentPromptStr = "What do you feel right now?";
     else if (step === 1) currentPromptStr = "Why do you feel this?";
@@ -63,7 +63,7 @@ export const JournalFlow: React.FC<{ onComplete: () => void, onViewPast: () => v
       
       const entryDate = new Date().toISOString().split('T')[0];
       
-      createJournalEntry(user.id, entryDate, entry).then(() => {
+      createJournalEntry(user.id, entryDate, entry, source).then(() => {
         setIsFinished(true);
       }).catch(err => {
         console.error('Failed to save entry', err);
