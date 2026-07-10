@@ -21,7 +21,13 @@ export const AuthPage: React.FC = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
         if (error) throw error;
         
         if (data.user && data.user.identities && data.user.identities.length === 0) {
@@ -29,7 +35,9 @@ export const AuthPage: React.FC = () => {
           return;
         }
 
-        setMessage('Account created! Please check your email for a confirmation link.');
+        if (!data.session) {
+          setMessage('Account created! Please check your email for a confirmation link.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during authentication');

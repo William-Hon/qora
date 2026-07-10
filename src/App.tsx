@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { AuthPage } from './components/AuthPage'
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { session, loading } = useAuth();
 
   if (loading) {
     return (
@@ -13,7 +13,7 @@ function AppContent() {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return <AuthPage />;
   }
 

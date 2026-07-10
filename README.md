@@ -109,6 +109,12 @@ To enable authentication and cloud journal storage, you need a Supabase project.
 2. Run the SQL schema script in your Supabase SQL Editor:
    - Copy the contents of `docs/supabase_schema.sql` and run it in the SQL Editor to create the `journal_entries` table, Row Level Security (RLS) policies, and the `ocr_usage_events` table for tracking OCR limits.
 
+3. Configure Redirect URLs:
+   In your Supabase Dashboard, go to **Authentication → URL Configuration → Redirect URLs** and add the following allow-listed URLs to ensure email confirmations redirect correctly:
+   - `http://localhost:5174/**`
+   - `https://qora-orcin.vercel.app/**`
+   - `https://www.myqora.com/**`
+
 ---
 
 ## Google Cloud Vision Setup
