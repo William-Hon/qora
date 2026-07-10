@@ -29,17 +29,12 @@ Smart Prompt & Emotion Detection MVP
 
 ## Latest Session Changes
 
-Added
-- Backend API endpoint `/api/ocr.ts` to securely handle Google Cloud Vision API calls and quota verification using Supabase RPC (`reserve_ocr_unit`).
-- Custom Vite server middleware in `vite.config.ts` to handle local development of the `/api/ocr` serverless endpoint without needing `vercel dev`.
-
 Changed
-- `PromptCard`: Renamed "Scan Document" button to "Upload Entry" and introduced an intermediate modal to choose between "Typed" (Unlimited, local OCR) and "Handwritten" (Quota-based, Cloud OCR).
-- `useDocumentScanner.ts`: Updated logic to dynamically route OCR tasks to local Tesseract or the backend Cloud Vision endpoint depending on the user's selection.
-- `index.html`: Updated browser tab title to "qora" and added custom favicon.
-
-Removed
-- `vite-plugin-vercel` (replaced by a lightweight custom Vite middleware for a smoother local dev experience).
+- **Global Layout:** Transformed the app into a strictly non-scrolling, viewport-bound application by enforcing `100vh` and `100%` constraints with `overflow: hidden` on the body and app shell.
+- **Global Styles:** Hidden native scrollbars across all components to enforce a seamless, native app-like aesthetic.
+- `PromptCard`: Restructured the `.input-actions` button layout into a stacked full-width column, establishing a flawless 2x2 grid of evenly sized buttons. This guarantees no horizontal overflow or text clipping on narrow mobile screens.
+- `PromptCard`: Removed fixed minimum heights on text areas to enable true fluid flexing, allowing the UI to gracefully scale down to available screen real estate without content cutoff.
+- `AuthPage`: Constrained the authentication container to `100%` height to align with the new absolute viewport bounds.
 
 ---
 
